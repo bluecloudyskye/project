@@ -1,0 +1,294 @@
+<!-- ================================================================
+     MainWindow.xaml
+     Business Rule: Shell window with Fluent Design Mica backdrop,
+     Segoe UI Variable typography, and NavigationView matching the
+     Figma sidebar (Dashboard / Database View / Reminders + nested
+     Folders / Tags / Shared Access sections).
+     Supports Dark and Light themes via RequestedTheme binding.
+     ================================================================ -->
+
+<Window
+    x:Class="WorkSpaceApp.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:local="using:WorkSpaceApp"
+    mc:Ignorable="d"
+    Title="WorkSpace">
+
+    <!-- ?? Mica backdrop (Windows 11 Fluent Design) ???????????????? -->
+    <Window.SystemBackdrop>
+        <MicaBackdrop Kind="Base" />
+    </Window.SystemBackdrop>
+
+    <!-- ?? Root grid: full window ?????????????????????????????????? -->
+    <Grid>
+        <NavigationView
+            x:Name="NavView"
+            PaneDisplayMode="Left"
+            IsBackButtonVisible="Collapsed"
+            OpenPaneLength="280"
+            CompactModeThresholdWidth="1024"
+            ExpandedModeThresholdWidth="1024"
+            SelectionChanged="NavView_SelectionChanged"
+            >
+
+            <!-- ????????????????????????????????????????????????????
+                 SIDEBAR HEADER  – branding + theme toggle
+                 ???????????????????????????????????????????????????? -->
+            <NavigationView.PaneHeader>
+                <Grid Padding="16,5,16,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- App brand -->
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE8A5;" FontSize="16"
+                                  Foreground="{ThemeResource SystemAccentColor}"/>
+                        <TextBlock Text="WorkSpace"
+                                   Style="{StaticResource BodyStrongTextBlockStyle}"
+                                   FontFamily="Segoe UI Variable Display"
+                                   FontSize="15"/>
+                    </StackPanel>
+
+                    <!-- Theme toggle button -->
+                    <Button Grid.Column="1"
+                            x:Name="ThemeToggleButton"
+                            Click="ThemeToggle_Click"
+                            Style="{StaticResource DateTimePickerFlyoutButtonStyle}"
+                            Width="32" Height="32" Padding="0"
+                            ToolTipService.ToolTip="Toggle theme"
+                            CornerRadius="8">
+                        <FontIcon x:Name="ThemeIcon" Glyph="&#xE708;" FontSize="14"/>
+                    </Button>
+                </Grid>
+            </NavigationView.PaneHeader>
+
+            <!-- ????????????????????????????????????????????????????
+                 TOP-LEVEL NAV ITEMS  (Dashboard / Database / Reminders)
+                 Matches Figma main navigation section.
+                 ???????????????????????????????????????????????????? -->
+            <NavigationView.MenuItems>
+                <!-- Dashboard (Note Editor) -->
+                <NavigationViewItem
+                    x:Name="DashboardItem"
+                    Tag="Dashboard"
+                    Content="Dashboard">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8A5;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+
+                <!-- Database View -->
+                <NavigationViewItem
+                    x:Name="DatabaseItem"
+                    Tag="Database"
+                    Content="Database View">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xF164;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+
+                <!-- Reminders -->
+                <NavigationViewItem
+                    x:Name="RemindersItem"
+                    Tag="Reminders"
+                    Content="Reminders">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xEA8F;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+
+                <!-- ?? MY WORKSPACE section header ??????????????? -->
+                <NavigationViewItemHeader Content="MY WORKSPACE"/>
+
+                <!-- Folders (expandable) -->
+                <NavigationViewItem x:Name="FoldersNavItem" Content="Folders" IsExpanded="True">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xED41;"/>
+                    </NavigationViewItem.Icon>
+                    <NavigationViewItem.MenuItems>
+                        <NavigationViewItem x:Name="FoldersMenuItemsPlaceholder" Visibility="Collapsed" />
+                    </NavigationViewItem.MenuItems>
+                </NavigationViewItem>
+
+                <!-- Tags (expandable) -->
+                <NavigationViewItem Content="Tags" IsExpanded="True">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8EC;"/>
+                    </NavigationViewItem.Icon>
+                    <NavigationViewItem.MenuItems>
+
+                        <!-- Tag dots use Ellipse + color from theme -->
+                        <NavigationViewItem Tag="Tag_Important">
+                            <NavigationViewItem.Content>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Ellipse Width="8" Height="8" Fill="#ff4757"
+                                             VerticalAlignment="Center"/>
+                                    <TextBlock Text="Important" FontSize="12"/>
+                                </StackPanel>
+                            </NavigationViewItem.Content>
+                        </NavigationViewItem>
+
+                        <NavigationViewItem Tag="Tag_Work">
+                            <NavigationViewItem.Content>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Ellipse Width="8" Height="8" Fill="#0067c0"
+                                             VerticalAlignment="Center"/>
+                                    <TextBlock Text="Work" FontSize="12"/>
+                                </StackPanel>
+                            </NavigationViewItem.Content>
+                        </NavigationViewItem>
+
+                        <NavigationViewItem Tag="Tag_Ideas">
+                            <NavigationViewItem.Content>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Ellipse Width="8" Height="8" Fill="#ffa502"
+                                             VerticalAlignment="Center"/>
+                                    <TextBlock Text="Ideas" FontSize="12"/>
+                                </StackPanel>
+                            </NavigationViewItem.Content>
+                        </NavigationViewItem>
+
+                        <NavigationViewItem Tag="Tag_MeetingNotes">
+                            <NavigationViewItem.Content>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Ellipse Width="8" Height="8" Fill="#2ed573"
+                                             VerticalAlignment="Center"/>
+                                    <TextBlock Text="Meeting Notes" FontSize="12"/>
+                                </StackPanel>
+                            </NavigationViewItem.Content>
+                        </NavigationViewItem>
+                    </NavigationViewItem.MenuItems>
+                </NavigationViewItem>
+
+                <!-- Shared Access (expandable) -->
+                <NavigationViewItem Content="Shared Access" IsExpanded="False">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE716;"/>
+                    </NavigationViewItem.Icon>
+
+                    <NavigationViewItem.MenuItems>
+                        <NavigationViewItem Tag="Shared_TeamWorkspace">
+                            <NavigationViewItem.Content>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Text="Team Workspace" FontSize="12"/>
+
+                                    <TextBlock Grid.Column="1" Text="5 users"
+                                               FontSize="11"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               Margin="8,0,0,0"/>
+                                </Grid>
+                            </NavigationViewItem.Content>
+                        </NavigationViewItem>
+
+                        <NavigationViewItem Tag="Shared_ClientProjects">
+                            <NavigationViewItem.Content>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Text="Client Projects" FontSize="12"/>
+
+                                    <TextBlock Grid.Column="1" Text="3 users"
+                                               FontSize="11"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               Margin="8,0,0,0"/>
+                                </Grid>
+                            </NavigationViewItem.Content>
+                        </NavigationViewItem>
+                    </NavigationViewItem.MenuItems>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+
+            <!-- ????????????????????????????????????????????????????
+
+                 FOOTER  – Storage bar + sync status indicator
+
+                 Business Rule: Storage bar shows DB usage vs 1 GB cap.
+
+                 ???????????????????????????????????????????????????? -->
+
+            <NavigationView.PaneFooter>
+                <StackPanel Padding="16,8,16,16" Spacing="8">
+
+                    <!-- SignalR connection badge -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+
+                            CornerRadius="8" Padding="10,8">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <!-- Green dot = online, Red = offline -->
+                            <Ellipse x:Name="ConnectionDot"
+                                     Width="8" Height="8"
+                                     Fill="#2ed573"
+                                     VerticalAlignment="Center"/>
+
+                            <TextBlock x:Name="ConnectionLabel"
+                                       Text="Connected"
+                                       FontSize="11"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       VerticalAlignment="Center"/>
+
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Storage usage bar -->
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="6"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Text="Storage"
+                                       FontSize="11"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+                            <TextBlock x:Name="StorageLabel"
+                                       Grid.Column="1"
+                                       Text="0 MB / 1 GB"
+                                       FontSize="11"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </Grid>
+
+                        <!-- ProgressBar – Value bound to StorageViewModel.UsagePercent -->
+                        <ProgressBar x:Name="StorageBar"
+                                     Grid.Row="1"
+                                     Minimum="0" Maximum="100"
+                                     Value="0"
+                                     Height="6"
+                                     CornerRadius="3"/>
+                    </Grid>
+                </StackPanel>
+            </NavigationView.PaneFooter>
+
+            <!-- ????????????????????????????????????????????????????
+
+                 CONTENT FRAME  – NavigationView swaps pages here
+
+                 ???????????????????????????????????????????????????? -->
+
+            <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+                <Frame x:Name="ContentFrame"
+                       Padding="0"
+                       IsNavigationStackEnabled="True"/>
+            </Grid>
+
+        </NavigationView>
+    </Grid>
+</Window>

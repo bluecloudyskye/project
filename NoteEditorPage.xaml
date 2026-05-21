@@ -1,0 +1,180 @@
+<!-- ================================================================
+     Features/Notes/Views/NoteEditorPage.xaml
+     ================================================================ -->
+<Page
+    x:Class="WorkSpaceApp.Features.Notes.Views.NoteEditorPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:local="using:WorkSpaceApp.Features.Notes.Views"
+    xmlns:models="using:WorkSpaceApp.Core.Models"
+    xmlns:wv2="using:Microsoft.UI.Xaml.Controls"
+    x:Name="NotePageRoot"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.ColumnDefinitions>
+            <!-- Main editor area -->
+            <ColumnDefinition Width="*"/>
+            <!-- Right sidebar: History + Tags -->
+            <ColumnDefinition Width="300"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ===============================================================
+             LEFT: Main Editor Area
+             =============================================================== -->
+        <Grid Grid.Column="0" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="56"/>
+                <!-- Top bar -->
+                <RowDefinition Height="*"/>
+                <!-- Editor -->
+            </Grid.RowDefinitions>
+
+            <!-- Top Bar -->
+            <Border Grid.Row="0"
+                    BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                    BorderThickness="0,0,0,1"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    Padding="24,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Editable note title (inline TextBox) -->
+                    <TextBox x:Name="NoteTitleBox"
+                             PlaceholderText="Untitled Note"
+                             FontSize="15"
+                             FontWeight="SemiBold"
+                             FontFamily="Segoe UI Variable Display"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             VerticalAlignment="Center"
+                             Text="{x:Bind ViewModel.NoteTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <!-- Action buttons -->
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="8"
+                                VerticalAlignment="Center">
+
+                        <!-- Export to PDF -->
+                        <Button x:Name="ExportPdfButton"
+                                Command="{x:Bind ViewModel.ExportPdfCommand}"
+                                Style="{StaticResource AccentButtonStyle}"
+                                CornerRadius="8"
+                                Padding="12,6"
+                                FontSize="13">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE8A1;" FontSize="13"/>
+                                <TextBlock Text="Export PDF"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Save/Collaboration settings -->
+                        <Button Click="SaveAsButton_Click" 
+                                Style="{StaticResource AccentButtonStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE72D;" FontSize="13"/>
+                                <TextBlock Text="Save"/>
+                            </StackPanel>
+                        </Button>
+
+                        
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Rich Text Editor Containers -->
+            <Grid Grid.Row="1" Padding="24" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+                <Border CornerRadius="8"
+                        BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+                        <wv2:WebView2 x:Name="QuillEditor"
+                                      HorizontalAlignment="Stretch"
+                                      VerticalAlignment="Stretch"
+                                      AllowDrop="True"
+                                      IsTabStop="True"
+                                      TabIndex="0"
+                                      NavigationCompleted="QuillEditor_NavigationCompleted"
+                                      WebMessageReceived="QuillEditor_WebMessageReceived"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- ===============================================================
+             RIGHT SIDEBAR: History Log + Tag Manager
+             =============================================================== -->
+        <Border Grid.Column="1"
+        BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+        BorderThickness="1,0,0,0"
+        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="56"/>
+                    <!-- Header + кнопка выбора папки -->
+                    <RowDefinition Height="*"/>
+                    <!-- Дерево -->
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <Border Grid.Row="0"
+                BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="16,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xED41;" FontSize="14"
+                              Foreground="{ThemeResource SystemAccentColor}"/>
+                            <TextBlock Text="Files"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               FontFamily="Segoe UI Variable Text"
+                               VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <!-- Кнопка выбора папки -->
+                        <Button Grid.Column="1"
+                        x:Name="PickFolderButton"
+                        Click="PickFolderButton_Click"
+                        Style="{StaticResource DateTimePickerFlyoutButtonStyle}"
+                        Width="32" Height="32" Padding="0"
+                        CornerRadius="8"
+                        ToolTipService.ToolTip="Open folder">
+                            <FontIcon Glyph="&#xE838;" FontSize="14"/>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- Файловое дерево -->
+                <ScrollViewer Grid.Row="1"
+                      Padding="8"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Auto">
+
+                    <ItemsControl x:Name="FileTreeControl" ItemsSource="{x:Bind FileTreeVM.Roots, Mode=OneWay}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="models:FileTreeNode">
+                                <local:FileTreeNodeView Node="{x:Bind}"
+                                    NodeClickedCommand="{Binding ElementName=NotePageRoot, Path=FileTreeVM.NodeClickedCommand, Mode=OneWay}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
+</Page>

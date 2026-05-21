@@ -1,0 +1,313 @@
+<!-- ================================================================
+     Features/Sync/Views/CollaborationPage.xaml
+     Translates the Figma "CollaborationSettings" component to WinUI 3.
+     Sections:
+       1. Server Connection Status (SignalR online/offline badge)
+       2. Share Link (copy + access level)
+       3. Team Members (avatar + name + role selector + remove)
+       4. Role legend (Owner / Editor / Viewer)
+     Business Rules:
+       - File download gated by role (Viewer blocked)
+       - File download gated by 1 GB storage limit
+       - Owner PC must be online for sync
+     ================================================================ -->
+<Page
+    x:Class="WorkSpaceApp.Features.Sync.Views.CollaborationPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="Transparent">
+
+    <ScrollViewer Padding="24" VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="720" Spacing="24">
+
+            <!-- ═══════════════════════════════════════════════
+                 1. SERVER CONNECTION STATUS
+                 Business Rule: Shows real-time SignalR connection state.
+                 When offline, sync buttons are disabled.
+                 ═══════════════════════════════════════════════ -->
+            <Border CornerRadius="8"
+                    BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    Padding="16,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <!-- Connection icon toggles between Wifi and WifiOff -->
+                        <FontIcon x:Name="ConnectionIcon"
+                                  Glyph="&#xE701;"
+                                  FontSize="20"
+                                  Foreground="#2ed573"
+                                  VerticalAlignment="Center"/>
+                        <StackPanel Spacing="2" VerticalAlignment="Center">
+                            <TextBlock x:Name="ConnectionStatusLabel"
+                                       Text="Connected to Server"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock x:Name="ConnectionDetailLabel"
+                                       Text="Real-time sync enabled"
+                                       FontSize="11"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Reconnect / Connected toggle button -->
+                    <Button Grid.Column="1"
+                            x:Name="ConnectionToggleButton"
+                            Command="{x:Bind ViewModel.ToggleConnectionCommand}"
+                            Content="{x:Bind ViewModel.ConnectionButtonLabel, Mode=OneWay}"
+                            CornerRadius="8"
+                            Padding="12,6"
+                            FontSize="12"/>
+                </Grid>
+            </Border>
+
+            <!-- ═══════════════════════════════════════════════
+                 2. SHARE LINK
+                 ═══════════════════════════════════════════════ -->
+            <StackPanel Spacing="12">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE71B;" FontSize="14"
+                              Foreground="{ThemeResource SystemAccentColor}"/>
+                    <TextBlock Text="Share Link"
+                               FontSize="13"
+                               FontWeight="SemiBold"/>
+                </StackPanel>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox Text="{x:Bind ViewModel.ShareLink, Mode=OneWay}"
+                             IsReadOnly="True"
+                             FontSize="12"
+                             CornerRadius="8,0,0,8"
+                             Padding="10,8"/>
+
+                    <Button Grid.Column="1"
+                            Command="{x:Bind ViewModel.CopyLinkCommand}"
+                            Style="{StaticResource AccentButtonStyle}"
+                            CornerRadius="0,8,8,0"
+                            Padding="12,8"
+                            FontSize="12">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon x:Name="CopyIcon" Glyph="&#xE8C8;" FontSize="12"/>
+                            <TextBlock x:Name="CopyLabel" Text="Copy"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <!-- Link access level selector -->
+                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <TextBlock Text="Anyone with the link can:"
+                               FontSize="12"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               VerticalAlignment="Center"/>
+                    <ComboBox ItemsSource="{x:Bind ViewModel.LinkAccessOptions}"
+                              SelectedItem="{x:Bind ViewModel.SelectedLinkAccess, Mode=TwoWay}"
+                              FontSize="12"
+                              CornerRadius="8"
+                              MinWidth="100"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- ═══════════════════════════════════════════════
+                 3. TEAM MEMBERS
+                 Business Rule: Role selector disabled for Owner.
+                 File download button hidden for Viewers.
+                 ═══════════════════════════════════════════════ -->
+            <StackPanel Spacing="12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE8FA;" FontSize="14"
+                                  Foreground="{ThemeResource SystemAccentColor}"/>
+                        <TextBlock Text="Team Members"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"/>
+                    </StackPanel>
+
+                    <Button Grid.Column="1"
+                            Command="{x:Bind ViewModel.InviteMemberCommand}"
+                            Style="{StaticResource AccentButtonStyle}"
+                            CornerRadius="8"
+                            Padding="10,6"
+                            FontSize="12">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE8FA;" FontSize="12"/>
+                            <TextBlock Text="Invite"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <ItemsControl ItemsSource="{x:Bind ViewModel.TeamMembers, Mode=OneWay}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="0,0,0,6"
+                                    CornerRadius="8"
+                                    BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                    Padding="12,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Avatar + name + email -->
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <Border Width="32" Height="32"
+                                                CornerRadius="16"
+                                                Background="{ThemeResource SystemAccentColorLight3}">
+                                            <TextBlock Text="{Binding Initials}"
+                                                       FontSize="11"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{ThemeResource SystemAccentColor}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+                                        <StackPanel Spacing="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding DisplayName}"
+                                                       FontSize="12"
+                                                       FontWeight="Medium"/>
+                                            <TextBlock Text="{Binding Email}"
+                                                       FontSize="11"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!-- Role ComboBox (disabled for Owner) -->
+                                    <ComboBox Grid.Column="1"
+                                              Margin="0,0,8,0"
+                                              ItemsSource="{Binding RoleOptions}"
+                                              SelectedItem="{Binding Role, Mode=TwoWay}"
+                                              IsEnabled="{Binding IsNotOwner}"
+                                              FontSize="11"
+                                              CornerRadius="6"
+                                              MinWidth="90"
+                                              VerticalAlignment="Center"/>
+
+                                    <!-- Remove button (hidden for Owner) -->
+                                    <Button Grid.Column="2"
+                                            Visibility="{Binding IsNotOwner, Converter={StaticResource BoolToVisibilityConverter}}"
+                                            CommandParameter="{Binding}"
+                                            Command="{Binding DataContext.RemoveMemberCommand, ElementName=MembersControl}"
+                                            Style="{StaticResource DateTimePickerFlyoutButtonStyle}"
+                                            Width="30" Height="30"
+                                            Padding="0"
+                                            CornerRadius="6">
+                                        <FontIcon Glyph="&#xE711;"
+                                                  FontSize="12"
+                                                  Foreground="{ThemeResource SystemErrorTextColor}"/>
+                                    </Button>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+
+            <!-- ═══════════════════════════════════════════════
+                 4. SYNC / DOWNLOAD (role-gated)
+                 Business Rule: Download only for Owner & Editor.
+                 Disabled when owner PC is offline or storage >= 1 GB.
+                 ═══════════════════════════════════════════════ -->
+            <Border CornerRadius="8"
+                    BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    Padding="16">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Sync &amp; Download"
+                               FontSize="13"
+                               FontWeight="SemiBold"/>
+
+                    <!-- Storage warning (shown when > 80% full) -->
+                    <InfoBar x:Name="StorageWarning"
+                             Severity="Warning"
+                             IsOpen="{x:Bind ViewModel.IsStorageWarning, Mode=OneWay}"
+                             Title="Storage Nearly Full"
+                             Message="You are approaching the 1 GB local storage limit. Free up space before syncing."
+                             IsClosable="False"/>
+
+                    <Button Command="{x:Bind ViewModel.SyncNowCommand}"
+                            IsEnabled="{x:Bind ViewModel.CanSync, Mode=OneWay}"
+                            Style="{StaticResource AccentButtonStyle}"
+                            CornerRadius="8"
+                            Padding="16,8"
+                            FontSize="13">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE895;" FontSize="14"/>
+                            <TextBlock Text="Sync Now"/>
+                        </StackPanel>
+                    </Button>
+
+                    <TextBlock Text="{x:Bind ViewModel.SyncStatusMessage, Mode=OneWay}"
+                               FontSize="11"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ═══════════════════════════════════════════════
+                 5. ROLE LEGEND  (matches Figma bottom card)
+                 ═══════════════════════════════════════════════ -->
+            <Border CornerRadius="8"
+                    BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    Padding="16">
+                <StackPanel Spacing="10">
+
+                    <!-- Owner -->
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon Glyph="&#xE1CF;" FontSize="13" Foreground="#ffa502"/>
+                        <RichTextBlock FontSize="12">
+                            <Paragraph>
+                                <Run FontWeight="SemiBold" Text="Owner: "/>
+                                <Run Text="Full access, can delete workspace and manage all settings"/>
+                            </Paragraph>
+                        </RichTextBlock>
+                    </StackPanel>
+
+                    <!-- Editor -->
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon Glyph="&#xE70F;" FontSize="13" Foreground="#0067c0"/>
+                        <RichTextBlock FontSize="12">
+                            <Paragraph>
+                                <Run FontWeight="SemiBold" Text="Editor: "/>
+                                <Run Text="Can edit content, add comments, and invite viewers"/>
+                            </Paragraph>
+                        </RichTextBlock>
+                    </StackPanel>
+
+                    <!-- Viewer -->
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon Glyph="&#xE890;" FontSize="13" Foreground="#2ed573"/>
+                        <RichTextBlock FontSize="12">
+                            <Paragraph>
+                                <Run FontWeight="SemiBold" Text="Viewer: "/>
+                                <Run Text="Can only view content and add comments"/>
+                            </Paragraph>
+                        </RichTextBlock>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

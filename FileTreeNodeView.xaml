@@ -1,0 +1,65 @@
+﻿<!-- Features/Notes/Views/FileTreeNodeView.xaml -->
+<UserControl
+    x:Class="WorkSpaceApp.Features.Notes.Views.FileTreeNodeView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:models="using:WorkSpaceApp.Core.Models"
+    xmlns:local="using:WorkSpaceApp.Features.Notes.Views"
+    x:Name="RootControl">
+
+	<StackPanel>
+		<!-- Сам узел -->
+		<Button HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Left"
+                Style="{StaticResource DateTimePickerFlyoutButtonStyle}"
+                Command="{x:Bind NodeClickedCommand}"
+                CommandParameter="{x:Bind Node}"
+                Padding="4,4"
+                CornerRadius="6"
+                RightTapped="FileItem_RightTapped">
+			<StackPanel Orientation="Horizontal" Spacing="6">
+				<FontIcon x:Name="NodeIcon"
+                          Glyph="{x:Bind Node.Icon, Mode=OneWay}"
+                          FontSize="13"
+                          Foreground="{ThemeResource SystemAccentColor}"/>
+				<TextBlock Text="{x:Bind Node.Name}"
+                           FontSize="12"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+                <!-- Tag indicators for files -->
+                <ItemsControl ItemsSource="{x:Bind Node.Tags, Mode=OneWay}"
+                              Visibility="{x:Bind IsFileWithTags, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                              Margin="8,0,0,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Ellipse Width="6" Height="6" 
+                                     Fill="{Binding Color}"
+                                     Margin="2,0,0,0"
+                                     ToolTipService.ToolTip="{Binding Name}"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+			</StackPanel>
+		</Button>
+
+		<!-- Дочерние узлы (рекурсия), видны только если папка раскрыта -->
+		<ItemsControl ItemsSource="{x:Bind Node.Children, Mode=OneWay}"
+                      Visibility="{x:Bind Node.IsExpanded, Mode=OneWay,
+                          Converter={StaticResource BoolToVisibilityConverter}}"
+                      Margin="16,0,0,0">
+			<ItemsControl.ItemTemplate>
+				<DataTemplate x:DataType="models:FileTreeNode">
+					<local:FileTreeNodeView Node="{x:Bind}"
+                                            NodeClickedCommand="{Binding ElementName=RootControl,
+                                                Path=NodeClickedCommand}"/>
+				</DataTemplate>
+			</ItemsControl.ItemTemplate>
+		</ItemsControl>
+	</StackPanel>
+</UserControl>
