@@ -52,6 +52,9 @@ public partial class App : Application
             await db.Database.EnsureCreatedAsync();
         }
 
+        var profile = Services.GetRequiredService<IUserProfileService>();
+        await profile.LoadAsync();
+
         _mainWindow = Services.GetRequiredService<MainWindow>();
         MainWindowInstance = _mainWindow;
         _mainWindow.Activate();
@@ -67,14 +70,18 @@ public partial class App : Application
                 
                 // ?? Core services ????????????????????????????????
                 services.AddSingleton<IHardwareIdService, HardwareIdService>();
+                services.AddSingleton<IUserProfileService, UserProfileService>();
                 services.AddSingleton<IStorageMonitorService, StorageMonitorService>();
                 services.AddSingleton<ISignalRService, SignalRService>();
+                services.AddSingleton<ISyncService, SyncService>();
+                services.AddSingleton<SharedFolderManager>();
+                services.AddSingleton<PinnedFoldersService>();
 
                 // ?? ViewModels (transient = new instance per page) ?
                 services.AddTransient<NoteEditorViewModel>();
                 services.AddTransient<DatabaseViewModel>();
                 services.AddTransient<CollaborationViewModel>();
-                services.AddTransient<RemindersViewModel>(); // <-- ?????? ??? ??????
+                services.AddSingleton<RemindersViewModel>();
 
                 // ?? Shell ????????????????????????????????????????
                 services.AddSingleton<MainWindow>();

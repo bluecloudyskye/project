@@ -1,13 +1,3 @@
-<!-- ================================================================
-     Features/Database/Views/DatabasePage.xaml
-     Translates the Figma "DatabaseView" component to WinUI 3 XAML.
-     Layout: header toolbar ? DataGrid with Title/Date/Status/User/Tags
-     Business Rules:
-       - Dynamic tables: columns defined at runtime (SchemaJson)
-       - Audit trail: every row mutation writes a ChangeLog
-       - Export to PDF button
-       - Search + tag filter
-     ================================================================ -->
 <Page
     x:Class="WorkSpaceApp.Features.Database.Views.DatabasePage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -18,298 +8,357 @@
     Background="Transparent">
 
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="56"/>    <!-- Header bar -->
-            <RowDefinition Height="Auto"/>  <!-- Toolbar: search + filter -->
-            <RowDefinition Height="*"/>     <!-- Table content -->
-        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
-        <!-- ???????????????????????????????????????????????????
-             HEADER BAR
-             ??????????????????????????????????????????????????? -->
-        <Border Grid.Row="0"
-                BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
-                BorderThickness="0,0,0,1"
-                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                Padding="24,0">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+        <!-- ===============================================
+             LEFT SIDEBAR – table list
+             =============================================== -->
+        <Grid Grid.Column="0"
+              Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+              BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+              BorderThickness="0,0,1,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="56"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-                <TextBlock Text="Database View"
-                           FontSize="15"
-                           FontWeight="SemiBold"
-                           FontFamily="Segoe UI Variable Display"
-                           VerticalAlignment="Center"/>
-
-                <StackPanel Grid.Column="1"
-                            Orientation="Horizontal"
-                            Spacing="8"
-                            VerticalAlignment="Center">
-
-                    <!-- Export to PDF -->
-                    <Button Command="{x:Bind ViewModel.ExportPdfCommand}"
-                            Style="{StaticResource AccentButtonStyle}"
-                            CornerRadius="8"
-                            Padding="12,6"
-                            FontSize="13">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <FontIcon Glyph="&#xE8A1;" FontSize="13"/>
-                            <TextBlock Text="Export to PDF"/>
-                        </StackPanel>
-                    </Button>
-
-                    <!-- New entry -->
-                    <Button Command="{x:Bind ViewModel.AddRowCommand}"
-                            CornerRadius="8"
-                            Padding="12,6"
-                            FontSize="13">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <FontIcon Glyph="&#xE710;" FontSize="13"/>
-                            <TextBlock Text="New Entry"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <!-- ???????????????????????????????????????????????????
-             TOOLBAR: search + tag filter
-             ??????????????????????????????????????????????????? -->
-        <Border Grid.Row="1"
-                BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
-                BorderThickness="0,0,0,1"
-                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                Padding="16,10">
-            <StackPanel Orientation="Horizontal" Spacing="12">
-
-                <!-- Search box -->
-                <AutoSuggestBox Width="320"
-                                PlaceholderText="Search entries..."
-                                Text="{x:Bind ViewModel.SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                QueryIcon="Find"
-                                CornerRadius="8"
-                                FontSize="13"/>
-
-                <!-- Tag filter -->
-                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <FontIcon Glyph="&#xE71C;" FontSize="14"
-                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                              VerticalAlignment="Center"/>
-                    <ComboBox ItemsSource="{x:Bind ViewModel.AvailableTags, Mode=OneWay}"
-                              SelectedItem="{x:Bind ViewModel.SelectedTagFilter, Mode=TwoWay}"
-                              PlaceholderText="All Tags"
-                              FontSize="13"
-                              CornerRadius="8"
-                              MinWidth="140"/>
-                </StackPanel>
-            </StackPanel>
-        </Border>
-
-        <!-- ???????????????????????????????????????????????????
-             TABLE CONTENT
-             Using ListView with a custom header for lightweight rendering.
-             For production, swap with CommunityToolkit DataGrid.
-             ??????????????????????????????????????????????????? -->
-        <Grid Grid.Row="2" Padding="24">
-            <Border CornerRadius="8"
+            <!-- Sidebar header -->
+            <Border Grid.Row="0"
                     BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>  <!-- Column headers -->
-                        <RowDefinition Height="*"/>     <!-- Rows -->
-                    </Grid.RowDefinitions>
-
-                    <!-- Column header row -->
-                    <Grid Background="{ThemeResource LayerFillColorAltBrush}"
-                          Padding="16,10"
-                          BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
-                          BorderThickness="0,0,0,1">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="2*"/>  <!-- Title -->
-                            <ColumnDefinition Width="*"/>   <!-- Date -->
-                            <ColumnDefinition Width="*"/>   <!-- Status -->
-                            <ColumnDefinition Width="*"/>   <!-- Assigned User -->
-                            <ColumnDefinition Width="*"/>   <!-- Tags -->
-                            <ColumnDefinition Width="40"/>  <!-- Attachment -->
-                            <ColumnDefinition Width="40"/>  <!-- Actions -->
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Grid.Column="0" Text="TITLE"
-                                   Style="{StaticResource CaptionTextBlockStyle}"
-                                   FontWeight="SemiBold"
-                                   CharacterSpacing="50"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                        <TextBlock Grid.Column="1" Text="DATE"
-                                   Style="{StaticResource CaptionTextBlockStyle}"
-                                   FontWeight="SemiBold"
-                                   CharacterSpacing="50"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                        <TextBlock Grid.Column="2" Text="STATUS"
-                                   Style="{StaticResource CaptionTextBlockStyle}"
-                                   FontWeight="SemiBold"
-                                   CharacterSpacing="50"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                        <TextBlock Grid.Column="3" Text="ASSIGNED USER"
-                                   Style="{StaticResource CaptionTextBlockStyle}"
-                                   FontWeight="SemiBold"
-                                   CharacterSpacing="50"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                        <TextBlock Grid.Column="4" Text="TAGS"
-                                   Style="{StaticResource CaptionTextBlockStyle}"
-                                   FontWeight="SemiBold"
-                                   CharacterSpacing="50"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                    </Grid>
-
-                    <!-- Data rows -->
-                    <ListView Grid.Row="1"
-                              ItemsSource="{x:Bind ViewModel.FilteredRows, Mode=OneWay}"
-                              SelectionMode="Single"
-                              IsItemClickEnabled="True"
-                              ItemClick="Row_Clicked">
-                        <ListView.ItemContainerStyle>
-                            <Style TargetType="ListViewItem">
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                <Setter Property="Padding" Value="0"/>
-                                <Setter Property="Margin" Value="0"/>
-                            </Style>
-                        </ListView.ItemContainerStyle>
-
-                        <ListView.ItemTemplate>
-                            <DataTemplate>
-                                <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
-                                        BorderThickness="0,0,0,1"
-                                        Padding="16,12">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="2*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="40"/>
-                                            <ColumnDefinition Width="40"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <!-- Title -->
-                                        <TextBlock Grid.Column="0"
-                                                   Text="{Binding Title}"
-                                                   FontSize="13"
-                                                   FontWeight="Medium"
-                                                   VerticalAlignment="Center"/>
-
-                                        <!-- Date -->
-                                        <StackPanel Grid.Column="1"
-                                                    Orientation="Horizontal"
-                                                    Spacing="6"
-                                                    VerticalAlignment="Center">
-                                            <FontIcon Glyph="&#xE787;" FontSize="12"
-                                                      Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                            <TextBlock Text="{Binding UpdatedAt, Converter={StaticResource ShortDateConverter}}"
-                                                       FontSize="12"
-                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                        </StackPanel>
-
-                                        <!-- Status badge -->
-                                        <Border Grid.Column="2"
-                                                CornerRadius="6"
-                                                Padding="8,4"
-                                                Background="{Binding Status, Converter={StaticResource StatusToBrushConverter}}"
-                                                HorizontalAlignment="Left"
-                                                VerticalAlignment="Center">
-                                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                                <FontIcon Glyph="{Binding Status, Converter={StaticResource StatusToGlyphConverter}}"
-                                                          FontSize="11"/>
-                                                <TextBlock Text="{Binding Status}"
-                                                           FontSize="11"
-                                                           FontWeight="Medium"/>
-                                            </StackPanel>
-                                        </Border>
-
-                                        <!-- Assigned user avatar + name -->
-                                        <StackPanel Grid.Column="3"
-                                                    Orientation="Horizontal"
-                                                    Spacing="8"
-                                                    VerticalAlignment="Center">
-                                            <Border Width="24" Height="24"
-                                                    CornerRadius="12"
-                                                    Background="{ThemeResource SystemAccentColorLight3}">
-                                                <TextBlock Text="{Binding AssignedUserInitials}"
-                                                           FontSize="10"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="{ThemeResource SystemAccentColor}"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"/>
-                                            </Border>
-                                            <TextBlock Text="{Binding AssignedUser}"
-                                                       FontSize="12"
-                                                       VerticalAlignment="Center"/>
-                                        </StackPanel>
-
-                                        <!-- Tags -->
-                                        <ItemsControl Grid.Column="4"
-                                                      ItemsSource="{Binding TagNames}"
-                                                      VerticalAlignment="Center">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <StackPanel Orientation="Horizontal" Spacing="4"/>
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border CornerRadius="4"
-                                                            BorderThickness="1"
-                                                            BorderBrush="{ThemeResource SystemAccentColorLight1}"
-                                                            Background="{ThemeResource SystemAccentColorLight3}"
-                                                            Padding="6,2">
-                                                        <TextBlock Text="{Binding}"
-                                                                   FontSize="11"
-                                                                   Foreground="{ThemeResource SystemAccentColor}"/>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-
-                                        <!-- Attachment icon -->
-                                        <FontIcon Grid.Column="5"
-                                                  Glyph="&#xE723;"
-                                                  FontSize="14"
-                                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                  VerticalAlignment="Center"
-                                                  Visibility="{Binding HasAttachment, Converter={StaticResource BoolToVisibilityConverter}}"/>
-
-                                        <!-- Row actions button -->
-                                        <Button Grid.Column="6"
-                                                Style="{StaticResource DateTimePickerFlyoutButtonStyle}"
-                                                Width="28" Height="28"
-                                                Padding="0"
-                                                VerticalAlignment="Center">
-                                            <FontIcon Glyph="&#xE712;" FontSize="13"
-                                                      Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                            <Button.Flyout>
-                                                <MenuFlyout>
-                                                    <MenuFlyoutItem Text="Edit" Icon="Edit"/>
-                                                    <MenuFlyoutItem Text="Delete"
-                                                                    Icon="Delete"
-                                                                    Foreground="Red"/>
-                                                </MenuFlyout>
-                                            </Button.Flyout>
-                                        </Button>
-
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
-
-                </Grid>
+                    BorderThickness="0,0,0,1"
+                    Padding="16,0">
+                <TextBlock Text="Tables"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </Border>
+
+            <!-- Tables list -->
+            <ListView Grid.Row="1"
+                      x:Name="TablesList"
+                      ItemsSource="{x:Bind ViewModel.Tables, Mode=OneWay}"
+                      SelectionMode="Single"
+                      SelectionChanged="TablesList_SelectionChanged">
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="Padding" Value="12,0"/>
+                        <Setter Property="MinHeight" Value="40"/>
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="10" Height="36">
+                            <FontIcon Glyph="{Binding Glyph}"
+                                      FontFamily="Segoe MDL2 Assets"
+                                      FontSize="14"
+                                      VerticalAlignment="Center"
+                                      Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock Text="{Binding Name}"
+                                       FontSize="13"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <!-- New table button -->
+            <Button Grid.Row="2"
+                    Click="NewTable_Click"
+                    HorizontalAlignment="Stretch"
+                    Margin="12,8"
+                    CornerRadius="8"
+                    Padding="12,8"
+                    FontSize="13">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE710;" FontSize="13"/>
+                    <TextBlock Text="New Table"/>
+                </StackPanel>
+            </Button>
         </Grid>
 
+        <!-- ===============================================
+             RIGHT PANEL – header + column headers + rows
+             =============================================== -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="56"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Panel header -->
+            <Border Grid.Row="0"
+                    BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                    BorderThickness="0,0,0,1"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    Padding="20,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="{x:Bind ViewModel.SelectedTableName, Mode=OneWay}"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               FontFamily="Segoe UI Variable Display"
+                               VerticalAlignment="Center"/>
+
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="8"
+                                VerticalAlignment="Center">
+
+                        <!-- Delete table (custom tables only) -->
+                        <Button Click="DeleteTable_Click"
+                                Visibility="{x:Bind ViewModel.DeleteTableVisibility, Mode=OneWay}"
+                                CornerRadius="8"
+                                Padding="12,6"
+                                FontSize="13">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE74D;" FontSize="13"/>
+                                <TextBlock Text="Delete Table"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Add row (custom tables only) -->
+                        <Button Click="NewRow_Click"
+                                Visibility="{x:Bind ViewModel.AddRowVisibility, Mode=OneWay}"
+                                Style="{StaticResource AccentButtonStyle}"
+                                CornerRadius="8"
+                                Padding="12,6"
+                                FontSize="13">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE710;" FontSize="13"/>
+                                <TextBlock Text="New Row"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Column headers — left-click renames, right-click shows type menu -->
+            <Border Grid.Row="1"
+                    Background="{ThemeResource LayerFillColorAltBrush}"
+                    BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                    BorderThickness="0,0,0,1"
+                    Padding="20,0">
+                <Grid MinHeight="40">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="36"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button Grid.Column="0" Tag="0" Click="ColumnHeader_Click"
+                            Background="Transparent" BorderThickness="0" Padding="8,0"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                            VerticalAlignment="Stretch" VerticalContentAlignment="Center"
+                            ToolTipService.ToolTip="Click to rename • Right-click for options">
+                        <TextBlock Text="{x:Bind ViewModel.Header0, Mode=OneWay}"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   FontWeight="SemiBold" CharacterSpacing="50"
+                                   VerticalAlignment="Center"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <Button.ContextFlyout>
+                            <MenuFlyout>
+                                <MenuFlyoutItem Text="Rename" Tag="0" Icon="Edit" Click="RenameColumn_MenuClick"/>
+                                <MenuFlyoutSeparator/>
+                                <MenuFlyoutItem Text="Make Checkbox Column" Tag="0" Click="MakeCheckboxColumn_Click">
+                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE739;"/></MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                            </MenuFlyout>
+                        </Button.ContextFlyout>
+                    </Button>
+
+                    <Button Grid.Column="1" Tag="1" Click="ColumnHeader_Click"
+                            Background="Transparent" BorderThickness="0" Padding="8,0"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                            VerticalAlignment="Stretch" VerticalContentAlignment="Center"
+                            Visibility="{x:Bind ViewModel.ColHeader1Visible, Mode=OneWay}"
+                            ToolTipService.ToolTip="Click to rename • Right-click for options">
+                        <TextBlock Text="{x:Bind ViewModel.Header1, Mode=OneWay}"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   FontWeight="SemiBold" CharacterSpacing="50"
+                                   VerticalAlignment="Center"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <Button.ContextFlyout>
+                            <MenuFlyout>
+                                <MenuFlyoutItem Text="Rename" Tag="1" Icon="Edit" Click="RenameColumn_MenuClick"/>
+                                <MenuFlyoutSeparator/>
+                                <MenuFlyoutItem Text="Make Checkbox Column" Tag="1" Click="MakeCheckboxColumn_Click">
+                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE739;"/></MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                            </MenuFlyout>
+                        </Button.ContextFlyout>
+                    </Button>
+
+                    <Button Grid.Column="2" Tag="2" Click="ColumnHeader_Click"
+                            Background="Transparent" BorderThickness="0" Padding="8,0"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                            VerticalAlignment="Stretch" VerticalContentAlignment="Center"
+                            Visibility="{x:Bind ViewModel.ColHeader2Visible, Mode=OneWay}"
+                            ToolTipService.ToolTip="Click to rename • Right-click for options">
+                        <TextBlock Text="{x:Bind ViewModel.Header2, Mode=OneWay}"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   FontWeight="SemiBold" CharacterSpacing="50"
+                                   VerticalAlignment="Center"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <Button.ContextFlyout>
+                            <MenuFlyout>
+                                <MenuFlyoutItem Text="Rename" Tag="2" Icon="Edit" Click="RenameColumn_MenuClick"/>
+                                <MenuFlyoutSeparator/>
+                                <MenuFlyoutItem Text="Make Checkbox Column" Tag="2" Click="MakeCheckboxColumn_Click">
+                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE739;"/></MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                            </MenuFlyout>
+                        </Button.ContextFlyout>
+                    </Button>
+
+                    <Button Grid.Column="3" Tag="3" Click="ColumnHeader_Click"
+                            Background="Transparent" BorderThickness="0" Padding="8,0"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                            VerticalAlignment="Stretch" VerticalContentAlignment="Center"
+                            Visibility="{x:Bind ViewModel.ColHeader3Visible, Mode=OneWay}"
+                            ToolTipService.ToolTip="Click to rename • Right-click for options">
+                        <TextBlock Text="{x:Bind ViewModel.Header3, Mode=OneWay}"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   FontWeight="SemiBold" CharacterSpacing="50"
+                                   VerticalAlignment="Center"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <Button.ContextFlyout>
+                            <MenuFlyout>
+                                <MenuFlyoutItem Text="Rename" Tag="3" Icon="Edit" Click="RenameColumn_MenuClick"/>
+                                <MenuFlyoutSeparator/>
+                                <MenuFlyoutItem Text="Make Checkbox Column" Tag="3" Click="MakeCheckboxColumn_Click">
+                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE739;"/></MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                            </MenuFlyout>
+                        </Button.ContextFlyout>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- Data rows — click any cell to edit, checkbox columns show CheckBox controls -->
+            <Border Grid.Row="2" Padding="0">
+                <ListView x:Name="RowsList"
+                          ItemsSource="{x:Bind ViewModel.Rows, Mode=OneWay}"
+                          SelectionMode="None"
+                          IsItemClickEnabled="True"
+                          ItemClick="RowsList_ItemClick">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Margin" Value="0"/>
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                                    BorderThickness="0,0,0,1"
+                                    Padding="20,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="36"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Col 0 -->
+                                    <Grid Grid.Column="0">
+                                        <TextBlock Text="{Binding Col0}"
+                                                   Visibility="{Binding IsNotCheckCol0, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                   FontSize="13" FontWeight="Medium"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <CheckBox IsChecked="{Binding CheckVal0}"
+                                                  Visibility="{Binding IsCheckCol0, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                  Tag="0" Click="CellCheckbox_Click"
+                                                  VerticalAlignment="Center" Margin="-4,0,0,0"/>
+                                    </Grid>
+
+                                    <!-- Col 1 -->
+                                    <Grid Grid.Column="1">
+                                        <TextBlock Text="{Binding Col1}"
+                                                   Visibility="{Binding IsNotCheckCol1, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                   FontSize="12" VerticalAlignment="Center"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <CheckBox IsChecked="{Binding CheckVal1}"
+                                                  Visibility="{Binding IsCheckCol1, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                  Tag="1" Click="CellCheckbox_Click"
+                                                  VerticalAlignment="Center" Margin="-4,0,0,0"/>
+                                    </Grid>
+
+                                    <!-- Col 2 (preserves colour-dot for non-checkbox columns) -->
+                                    <Grid Grid.Column="2">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
+                                                    Visibility="{Binding IsNotCheckCol2, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <Ellipse Width="8" Height="8"
+                                                     Fill="{Binding Col2, Converter={StaticResource HexColorToBrushConverter}}"
+                                                     Visibility="{Binding Col2, Converter={StaticResource HexColorToVisibilityConverter}}"
+                                                     VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Col2}"
+                                                       FontSize="12" VerticalAlignment="Center"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                        <CheckBox IsChecked="{Binding CheckVal2}"
+                                                  Visibility="{Binding IsCheckCol2, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                  Tag="2" Click="CellCheckbox_Click"
+                                                  VerticalAlignment="Center" Margin="-4,0,0,0"/>
+                                    </Grid>
+
+                                    <!-- Col 3 -->
+                                    <Grid Grid.Column="3">
+                                        <TextBlock Text="{Binding Col3}"
+                                                   Visibility="{Binding IsNotCheckCol3, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                   FontSize="12" VerticalAlignment="Center"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <CheckBox IsChecked="{Binding CheckVal3}"
+                                                  Visibility="{Binding IsCheckCol3, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                  Tag="3" Click="CellCheckbox_Click"
+                                                  VerticalAlignment="Center" Margin="-4,0,0,0"/>
+                                    </Grid>
+
+                                    <!-- Row actions -->
+                                    <Button Grid.Column="4"
+                                            Style="{StaticResource DateTimePickerFlyoutButtonStyle}"
+                                            Width="28" Height="28"
+                                            Padding="0"
+                                            VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE712;" FontSize="13"
+                                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <Button.Flyout>
+                                            <MenuFlyout>
+                                                <MenuFlyoutItem Text="Edit Row"
+                                                                Icon="Edit"
+                                                                Click="EditRow_Click"/>
+                                                <MenuFlyoutSeparator/>
+                                                <MenuFlyoutItem Text="Delete"
+                                                                Icon="Delete"
+                                                                Click="DeleteRow_Click"/>
+                                            </MenuFlyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Border>
+        </Grid>
     </Grid>
 </Page>

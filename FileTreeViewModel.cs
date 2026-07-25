@@ -22,9 +22,12 @@ public partial class FileTreeViewModel : ObservableObject
 
     // Событие — Page подписывается и открывает файл в редакторе
     public event Action<string>? FileSelected;
-    
+
     // Событие — Page подписывается и отображает содержимое папки в правой панели
     public event Action<string>? FolderSelected;
+
+    // Fires when user opens a remote (sync) file; argument is the relative path
+    public event Action<string>? RemoteFileSelected;
 
     public FileTreeViewModel(AppDbContext db)
     {
@@ -108,13 +111,87 @@ public partial class FileTreeViewModel : ObservableObject
             return;
         }
 
-        // Это .md файл — сообщаем странице
         SelectedNode = node;
+
+        // Remote file (sync share) — fire separate event, no local path
+        if (node.IsRemote && node.RemoteRelativePath is not null)
+        {
+            RemoteFileSelected?.Invoke(node.RemoteRelativePath);
+            return;
+        }
+
+        // Local .md file
         FileSelected?.Invoke(node.FullPath);
     }
 
     // Открыть диалог выбора папки (вызывается из code-behind)
     public void SetRootPath(string path) => LoadDirectory(path);
+
+    /// <summary>
+    /// Populates the tree with remote (sync) file paths received from the server.
+    /// Builds a virtual folder hierarchy from the relative paths.
+    /// </summary>
+    public void LoadRemoteFiles(string[] relativePaths, string rootLabel)
+    {
+        Roots.Clear();
+        var root = new FileTreeNode
+        {
+            Name        = rootLabel,
+            FullPath    = "",
+            IsDirectory = true,
+            IsRemote    = true,
+            IsExpanded  = true
+        };
+
+        foreach (var relPath in relativePaths.OrderBy(p => p))
+        {
+            var parts   = relPath.Replace('\\', '/').Split('/');
+            var current = root;
+
+            // Walk/create intermediate folder nodes
+            for (int i = 0; i < parts.Length - 1; i++)
+            {
+                var dirName  = parts[i];
+                var existing = current.Children
+                    .FirstOrDefault(c => c.IsDirectory && c.Name == dirName);
+                if (existing is null)
+                {
+                    existing = new FileTreeNode
+                    {
+                        Name        = dirName,
+                        FullPath    = "",
+                        IsDirectory = true,
+                        IsRemote    = true,
+                        IsExpanded  = true
+                    };
+                    current.Children.Add(existing);
+                }
+                current = existing;
+            }
+
+            // Add the file node
+            current.Children.Add(new FileTreeNode
+            {
+                Name               = parts[^1],
+                FullPath           = relPath,
+                IsDirectory        = false,
+                IsRemote           = true,
+                RemoteRelativePath = relPath
+            });
+        }
+
+        Roots.Add(root);
+    }
+
+    /// <summary>Removes all remote (sync) roots from the tree.</summary>
+    public void ClearRemoteFiles()
+    {
+        for (int i = Roots.Count - 1; i >= 0; i--)
+        {
+            if (Roots[i].IsRemote)
+                Roots.RemoveAt(i);
+        }
+    }
 
     // ── Метод для переключения тега файла ─────────────────────
     public async Task ToggleFileTagAsync(string filePath, Tag tag)

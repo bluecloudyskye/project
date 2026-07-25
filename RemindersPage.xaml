@@ -145,50 +145,74 @@
                     <ItemsControl ItemsSource="{x:Bind ViewModel.ActiveReminders, Mode=OneWay}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <!--
-                                    Priority border colors:
-                                    High   = Red    (#ff4757) left border
-                                    Medium = Blue   (#0067c0) left border
-                                    Low    = Muted  left border
-                                -->
                                 <Border Margin="0,0,0,10"
                                         CornerRadius="8"
                                         BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
                                         BorderThickness="1"
-                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                        Padding="16,12">
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                                     <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
+                                        <!-- Priority color strip -->
+                                        <Border Width="4"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Stretch"
+                                                CornerRadius="8,0,0,8"
+                                                Background="{Binding Priority, Converter={StaticResource PriorityToColorConverter}}"/>
 
-                                        <!-- Complete toggle -->
-                                        <!-- Data Flow: TwoWay binding updates ReminderItem.IsCompleted, triggers OnCompletionChanged callback, then ViewModel.RefreshLists() -->
-                                        <CheckBox Grid.Column="0"
-                                                  IsChecked="{Binding IsCompleted, Mode=TwoWay}"
-                                                  Margin="0,0,12,0"
-                                                  VerticalAlignment="Top"/>
+                                        <!-- Card content (left margin clears the strip) -->
+                                        <Grid Margin="16,12,16,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
 
-                                        <!-- Content -->
-                                        <StackPanel Grid.Column="1" Spacing="4">
-                                            <TextBlock Text="{Binding Title}"
-                                                       FontSize="13"
-                                                       FontWeight="SemiBold"/>
-                                            <TextBlock Text="{Binding Description}"
-                                                       FontSize="12"
-                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                       TextWrapping="Wrap"/>
+                                            <CheckBox Grid.Column="0"
+                                                      IsChecked="{Binding IsCompleted, Mode=TwoWay}"
+                                                      Margin="0,0,12,0"
+                                                      VerticalAlignment="Top"/>
 
-                                            <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,4,0,0">
-                                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                                    <FontIcon Glyph="&#xE823;" FontSize="11"
-                                                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                                    <TextBlock Text="{Binding FormattedTime}"
-                                                               FontSize="11"
-                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                                </StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="4">
+                                                <!-- Editable title -->
+                                                <TextBox Text="{Binding Title, Mode=TwoWay}"
+                                                         FontSize="13"
+                                                         FontWeight="SemiBold"
+                                                         Background="Transparent"
+                                                         BorderThickness="0"
+                                                         Padding="2,0"/>
+
+                                                <!-- Editable description -->
+                                                <TextBox Text="{Binding Description, Mode=TwoWay}"
+                                                         FontSize="12"
+                                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                         Background="Transparent"
+                                                         BorderThickness="0"
+                                                         Padding="2,0"
+                                                         TextWrapping="Wrap"
+                                                         AcceptsReturn="True"/>
+
+                                                <!-- Clickable time label â€” opens flyout to edit date/time -->
+                                                <Button Background="Transparent"
+                                                        BorderThickness="0"
+                                                        Padding="2,0"
+                                                        Margin="0,4,0,0"
+                                                        HorizontalAlignment="Left">
+                                                    <Button.Flyout>
+                                                        <Flyout Placement="Bottom">
+                                                            <StackPanel Spacing="12" Padding="4">
+                                                                <DatePicker Date="{Binding DueDate, Mode=TwoWay}"/>
+                                                                <TimePicker Time="{Binding DueTime, Mode=TwoWay}"/>
+                                                            </StackPanel>
+                                                        </Flyout>
+                                                    </Button.Flyout>
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <FontIcon Glyph="&#xE823;" FontSize="11"
+                                                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                        <TextBlock Text="{Binding FormattedTime}"
+                                                                   FontSize="11"
+                                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                    </StackPanel>
+                                                </Button>
+
                                                 <StackPanel Orientation="Horizontal"
                                                             Spacing="4"
                                                             Visibility="{Binding IsSynced, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -196,25 +220,26 @@
                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                                     <TextBlock FontSize="11"
                                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}">
-                                                        <Run Text="From " />
-                                                        <Run Text="{Binding Source}" />
+                                                        <Run Text="From "/>
+                                                        <Run Text="{Binding Source}"/>
                                                     </TextBlock>
                                                 </StackPanel>
                                             </StackPanel>
-                                        </StackPanel>
 
-                                        <!-- Delete -->
-                                        <Button Grid.Column="2"
-                                                CommandParameter="{Binding}"
-                                                Command="{Binding DataContext.DeleteReminderCommand, ElementName=RemindersScroll}"
-                                                Style="{StaticResource DateTimePickerFlyoutButtonStyle}"
-                                                Width="30" Height="30"
-                                                Padding="0"
-                                                CornerRadius="6"
-                                                VerticalAlignment="Top">
-                                            <FontIcon Glyph="&#xE74D;" FontSize="12"
-                                                      Foreground="{ThemeResource SystemErrorTextColor}"/>
-                                        </Button>
+                                            <Button Grid.Column="2"
+                                                    CommandParameter="{Binding}"
+                                                    Command="{Binding DataContext.DeleteReminderCommand, ElementName=RemindersScroll}"
+                                                    Background="Transparent"
+                                                    BorderBrush="Transparent"
+                                                    BorderThickness="0"
+                                                    Width="30" Height="30"
+                                                    Padding="0"
+                                                    CornerRadius="6"
+                                                    VerticalAlignment="Top">
+                                                <FontIcon Glyph="&#xE74D;" FontSize="12"
+                                                          Foreground="{ThemeResource SystemErrorTextColor}"/>
+                                            </Button>
+                                        </Grid>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -233,7 +258,65 @@
 
                     <ItemsControl ItemsSource="{x:Bind ViewModel.CompletedReminders, Mode=OneWay}"
                                   Opacity="0.6">
-                        <!-- Same DataTemplate as above – in production extract to ResourceDictionary -->
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Margin="0,0,0,10"
+                                        CornerRadius="8"
+                                        BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                                    <Grid>
+                                        <Border Width="4"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Stretch"
+                                                CornerRadius="8,0,0,8"
+                                                Background="{Binding Priority, Converter={StaticResource PriorityToColorConverter}}"/>
+
+                                        <Grid Margin="16,12,16,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <CheckBox Grid.Column="0"
+                                                      IsChecked="{Binding IsCompleted, Mode=TwoWay}"
+                                                      Margin="0,0,12,0"
+                                                      VerticalAlignment="Top"/>
+
+                                            <StackPanel Grid.Column="1" Spacing="4">
+                                                <TextBlock Text="{Binding Title}"
+                                                           FontSize="13"
+                                                           FontWeight="SemiBold"
+                                                           TextDecorations="Strikethrough"/>
+                                                <TextBlock Text="{Binding Description}"
+                                                           FontSize="12"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                           TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding FormattedTime}"
+                                                           FontSize="11"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                           Margin="0,4,0,0"/>
+                                            </StackPanel>
+
+                                            <Button Grid.Column="2"
+                                                    CommandParameter="{Binding}"
+                                                    Command="{Binding DataContext.DeleteReminderCommand, ElementName=RemindersScroll}"
+                                                    Background="Transparent"
+                                                    BorderBrush="Transparent"
+                                                    BorderThickness="0"
+                                                    Width="30" Height="30"
+                                                    Padding="0"
+                                                    CornerRadius="6"
+                                                    VerticalAlignment="Top">
+                                                <FontIcon Glyph="&#xE74D;" FontSize="12"
+                                                          Foreground="{ThemeResource SystemErrorTextColor}"/>
+                                            </Button>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
 

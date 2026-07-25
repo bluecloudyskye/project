@@ -10,6 +10,13 @@
 			<ResourceDictionary.MergedDictionaries>
 				<XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
 			</ResourceDictionary.MergedDictionaries>
+
+			<local:BoolToVisibilityConverter     x:Key="BoolToVisibilityConverter"/>
+			<local:BoolInverterConverter         x:Key="BoolInverterConverter"/>
+			<local:CountLabelConverter           x:Key="CountLabelConverter"/>
+			<local:PriorityToColorConverter      x:Key="PriorityToColorConverter"/>
+			<local:HexColorToBrushConverter      x:Key="HexColorToBrushConverter"/>
+			<local:HexColorToVisibilityConverter x:Key="HexColorToVisibilityConverter"/>
 		</ResourceDictionary>
 	</Application.Resources>
 </Application>

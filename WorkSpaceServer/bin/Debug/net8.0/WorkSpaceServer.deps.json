@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "WorkSpaceServer/1.0.0": {
+        "runtime": {
+          "WorkSpaceServer.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "WorkSpaceServer/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

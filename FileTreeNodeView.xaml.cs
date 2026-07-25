@@ -53,7 +53,8 @@ public sealed partial class FileTreeNodeView : UserControl
     {
         if (Node == null) return;
 
-        // Both files and directories just need to execute the command now!
+        // Both files and directories just need to execute the
+        // nd now!
         if (NodeClickedCommand != null && NodeClickedCommand.CanExecute(Node))
         {
             NodeClickedCommand.Execute(Node);
@@ -62,40 +63,52 @@ public sealed partial class FileTreeNodeView : UserControl
 
     private void FileItem_RightTapped(object sender, RightTappedRoutedEventArgs e)
     {
-        if (Node == null || Node.IsDirectory) return;
+        if (Node == null) return;
 
-        // Создаем контекстное меню для выбора тега
         var menuFlyout = new MenuFlyout();
 
-        // Добавляем пункты для 4 предустановленных тегов
-        var importantTag = new Tag { Name = "Important", Color = "#ff4757" };
-        var workTag = new Tag { Name = "Work", Color = "#0067c0" };
-        var ideasTag = new Tag { Name = "Ideas", Color = "#ffa502" };
-        var meetingNotesTag = new Tag { Name = "Meeting Notes", Color = "#2ed573" };
-
-        var presetTags = new[] { importantTag, workTag, ideasTag, meetingNotesTag };
-
-        foreach (var tag in presetTags)
+        if (Node.IsDirectory && !Node.IsRemote)
         {
-            var menuItem = new MenuFlyoutItem
+            // ── Folder context menu ────────────────────────────
+            var shareItem = new MenuFlyoutItem
             {
-                Text = tag.Name,
-                Tag = tag
+                Text = "Share Folder...",
+                Icon = new FontIcon { Glyph = "" }
+            };
+            shareItem.Click += (_, _) => ShareFolder_Click();
+            menuFlyout.Items.Add(shareItem);
+        }
+        else if (!Node.IsDirectory && !Node.IsRemote)
+        {
+            // ── File context menu — tag picker ─────────────────
+            var presetTags = new[]
+            {
+                new Tag { Name = "Important",    Color = "#ff4757" },
+                new Tag { Name = "Work",         Color = "#0067c0" },
+                new Tag { Name = "Ideas",        Color = "#ffa502" },
+                new Tag { Name = "Meeting Notes",Color = "#2ed573" }
             };
 
-            // Проверяем, установлен ли уже этот тег
-            bool hasTag = Node.Tags.Any(t => t.Name == tag.Name);
-            if (hasTag)
+            foreach (var tag in presetTags)
             {
-                menuItem.Icon = new SymbolIcon(Symbol.Accept);
+                var item = new MenuFlyoutItem { Text = tag.Name, Tag = tag };
+                if (Node.Tags.Any(t => t.Name == tag.Name))
+                    item.Icon = new SymbolIcon(Symbol.Accept);
+                item.Click += (_, _) => ToggleTagForFile(tag);
+                menuFlyout.Items.Add(item);
             }
-
-            menuItem.Click += (s, args) => ToggleTagForFile(tag);
-            menuFlyout.Items.Add(menuItem);
         }
 
+        if (menuFlyout.Items.Count == 0) return;
         menuFlyout.ShowAt(this);
         e.Handled = true;
+    }
+
+    private void ShareFolder_Click()
+    {
+        if (Node == null || !Node.IsDirectory) return;
+        var page = GetParentPage();
+        page?.ShowShareFolderDialog(Node.FullPath, Node.Name);
     }
 
     private async void ToggleTagForFile(Tag tag)
@@ -111,12 +124,12 @@ public sealed partial class FileTreeNodeView : UserControl
 
     private NoteEditorPage? GetParentPage()
     {
-        var parent = this.Parent;
-        while (parent != null)
+        DependencyObject current = this;
+        while (current != null)
         {
-            if (parent is NoteEditorPage page)
+            if (current is NoteEditorPage page)
                 return page;
-            parent = (parent as FrameworkElement)?.Parent;
+            current = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(current);
         }
         return null;
     }

@@ -12,7 +12,9 @@
 		<!-- Сам узел -->
 		<Button HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Left"
-                Style="{StaticResource DateTimePickerFlyoutButtonStyle}"
+                Background="Transparent"
+                BorderBrush="Transparent"
+                BorderThickness="0"
                 Command="{x:Bind NodeClickedCommand}"
                 CommandParameter="{x:Bind Node}"
                 Padding="4,4"
@@ -23,13 +25,14 @@
                           Glyph="{x:Bind Node.Icon, Mode=OneWay}"
                           FontSize="13"
                           Foreground="{ThemeResource SystemAccentColor}"/>
-				<TextBlock Text="{x:Bind Node.Name}"
+				<TextBlock Text="{x:Bind Node.Name, Mode=OneWay}"
                            FontSize="12"
                            VerticalAlignment="Center"
+                           Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                            TextTrimming="CharacterEllipsis"/>
                 <!-- Tag indicators for files -->
                 <ItemsControl ItemsSource="{x:Bind Node.Tags, Mode=OneWay}"
-                              Visibility="{x:Bind IsFileWithTags, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                              Visibility="{x:Bind Node.HasTags, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
                               Margin="8,0,0,0">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -38,8 +41,8 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Ellipse Width="6" Height="6" 
-                                     Fill="{Binding Color}"
+                            <Ellipse Width="6" Height="6"
+                                     Fill="{Binding Color, Converter={StaticResource HexColorToBrushConverter}}"
                                      Margin="2,0,0,0"
                                      ToolTipService.ToolTip="{Binding Name}"/>
                         </DataTemplate>

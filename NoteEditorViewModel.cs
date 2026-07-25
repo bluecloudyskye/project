@@ -17,8 +17,9 @@ namespace WorkSpaceApp.Features.Notes.ViewModels;
 
 public partial class NoteEditorViewModel : ObservableObject
 {
-    private readonly AppDbContext       _db;
-    private readonly IHardwareIdService _hwId;
+    private readonly AppDbContext        _db;
+    private readonly IHardwareIdService  _hwId;
+    private readonly IUserProfileService _profile;
 
     private Guid _currentNoteId = Guid.Empty;
 
@@ -41,10 +42,11 @@ public partial class NoteEditorViewModel : ObservableObject
     /// <summary>Audit history displayed in the right panel.</summary>
     public ObservableCollection<ChangeLog> ChangeLogs { get; } = [];
 
-    public NoteEditorViewModel(AppDbContext db, IHardwareIdService hwId)
+    public NoteEditorViewModel(AppDbContext db, IHardwareIdService hwId, IUserProfileService profile)
     {
-        _db   = db;
-        _hwId = hwId;
+        _db      = db;
+        _hwId    = hwId;
+        _profile = profile;
     }
 
     public async Task LoadFromFileAsync(string filePath)
@@ -103,7 +105,7 @@ public partial class NoteEditorViewModel : ObservableObject
                 NoteId     = note.Id,
                 ChangeType = "Create",
                 Description = "Note created",
-                ChangedBy   = "You"
+                ChangedBy   = _profile.DisplayName
 
             });
 
@@ -151,7 +153,7 @@ public partial class NoteEditorViewModel : ObservableObject
             NoteId = _currentNoteId,
             ChangeType = "Update",
             Description = oldTitle != NoteTitle ? $"Title changed to '{NoteTitle}'" : "Content edited",
-            ChangedBy = "You"
+            ChangedBy = _profile.DisplayName
         });
 
         await _db.SaveChangesAsync();
@@ -181,7 +183,7 @@ public partial class NoteEditorViewModel : ObservableObject
             NoteId      = _currentNoteId,
             ChangeType  = "TagAdded",
             Description = $"Tag '{name}' added",
-            ChangedBy   = "You"
+            ChangedBy   = _profile.DisplayName
         });
 
         await _db.SaveChangesAsync();
@@ -205,7 +207,7 @@ public partial class NoteEditorViewModel : ObservableObject
             NoteId      = _currentNoteId,
             ChangeType  = "TagRemoved",
             Description = $"Tag '{tag.Name}' removed",
-            ChangedBy   = "You"
+            ChangedBy   = _profile.DisplayName
         });
 
         await _db.SaveChangesAsync();
@@ -215,24 +217,21 @@ public partial class NoteEditorViewModel : ObservableObject
 
     // ─────────────────────────────────────────────────────────
     /// <summary>
-    /// Business Rule: Export the current note to PDF using QuestPDF.
-    /// The HTML content is stripped to plain text for the PDF body;
-    /// a production implementation would use a proper HTML→PDF renderer.
+    /// Generates a PDF from the current note content to the given path.
+    /// Path selection is handled by the View (FileSavePicker).
+    /// Works in both DB-note mode and local file mode.
     /// </summary>
-    [RelayCommand]
-    public async Task ExportPdfAsync()
+    public async Task GeneratePdfAsync(string outputPath)
     {
-        if (_currentNoteId == Guid.Empty) return;
-
-        // QuestPDF Community license for open-source use
         QuestPDF.Settings.License = LicenseType.Community;
 
-        string outputPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-            $"{NoteTitle}_{DateTime.Now:yyyyMMdd_HHmm}.pdf");
-
+        // Strip HTML tags then strip Markdown syntax for clean plain text
         string plainText = System.Text.RegularExpressions.Regex
             .Replace(ContentMarkdown, "<.*?>", string.Empty);
+        plainText = System.Text.RegularExpressions.Regex
+            .Replace(plainText, @"[#*`>_~\[\]()!]", string.Empty);
+
+        string title = NoteTitle;
 
         await Task.Run(() =>
         {
@@ -242,32 +241,24 @@ public partial class NoteEditorViewModel : ObservableObject
                 {
                     page.Size(QuestPDF.Helpers.PageSizes.A4);
                     page.Margin(40, QuestPDF.Infrastructure.Unit.Point);
-                    page.DefaultTextStyle(t => t
-                        .FontFamily("Segoe UI")
-                        .FontSize(11));
+                    page.DefaultTextStyle(t => t.FontFamily("Segoe UI").FontSize(11));
 
-                    page.Header().Text(NoteTitle)
+                    page.Header().Text(title)
                         .FontSize(20)
                         .FontFamily("Segoe UI Variable Display")
                         .Bold()
                         .FontColor(QuestPDF.Helpers.Colors.Blue.Medium);
 
-                    page.Content()
-                        .PaddingTop(16)
-                        .Text(plainText);
+                    page.Content().PaddingTop(16).Text(plainText);
 
-                    page.Footer()
-                        .AlignRight()
-                        .Text(x =>
-                        {
-                            x.Span("Exported by WorkSpace · ");
-                            x.CurrentPageNumber();
-                        });
+                    page.Footer().AlignRight().Text(x =>
+                    {
+                        x.Span("Exported by WorkSpace · ");
+                        x.CurrentPageNumber();
+                    });
                 });
             }).GeneratePdf(outputPath);
         });
-
-        // TODO: open file in default PDF viewer or show a toast
     }
 
     // ─────────────────────────────────────────────────────────

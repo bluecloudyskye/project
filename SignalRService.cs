@@ -39,7 +39,7 @@ public interface ISignalRService
 }
 
 public sealed record OwnerStatusChangedEventArgs(bool IsOnline, long FreeDiskSpaceBytes);
-public sealed record HeartbeatEventArgs(string HardwareId, bool IsOnline, long FreeDiskSpaceBytes, DateTime Timestamp);
+public sealed record HeartbeatEventArgs(string HardwareId, bool IsOnline, long FreeDiskSpaceBytes, DateTime Timestamp, string DisplayName = "");
 
 // ── Re-export Role so callers don't need a separate using ──
 public enum Role { Owner, Editor, Viewer }
@@ -50,9 +50,10 @@ public enum Role { Owner, Editor, Viewer }
 public sealed class SignalRService : ISignalRService, IAsyncDisposable
 {
     // ── Dependencies ──────────────────────────────────────────
-    private readonly AppDbContext         _db;
-    private readonly IHardwareIdService   _hwId;
+    private readonly AppDbContext           _db;
+    private readonly IHardwareIdService     _hwId;
     private readonly IStorageMonitorService _storage;
+    private readonly IUserProfileService    _profile;
 
     // ── State ─────────────────────────────────────────────────
     private HubConnection? _hub;
@@ -69,11 +70,12 @@ public sealed class SignalRService : ISignalRService, IAsyncDisposable
     public event EventHandler<OwnerStatusChangedEventArgs>? OwnerStatusChanged;
     public event EventHandler<HeartbeatEventArgs>?          HeartbeatReceived;
 
-    public SignalRService(AppDbContext db, IHardwareIdService hwId, IStorageMonitorService storage)
+    public SignalRService(AppDbContext db, IHardwareIdService hwId, IStorageMonitorService storage, IUserProfileService profile)
     {
         _db      = db;
         _hwId    = hwId;
         _storage = storage;
+        _profile = profile;
     }
 
     // ─────────────────────────────────────────────────────────
@@ -106,10 +108,10 @@ public sealed class SignalRService : ISignalRService, IAsyncDisposable
             OwnerStatusChanged?.Invoke(this, new OwnerStatusChangedEventArgs(isOnline, freeDiskBytes));
         });
 
-        // Receive heartbeats from other peers
-        _hub.On<string, bool, long, DateTime>("PeerHeartbeat",
-            (hwId, isOnline, freeDisk, ts) =>
-                HeartbeatReceived?.Invoke(this, new HeartbeatEventArgs(hwId, isOnline, freeDisk, ts)));
+        // Receive heartbeats from other peers (server forwards name too)
+        _hub.On<string, bool, long, DateTime, string>("PeerHeartbeat",
+            (hwId, isOnline, freeDisk, ts, name) =>
+                HeartbeatReceived?.Invoke(this, new HeartbeatEventArgs(hwId, isOnline, freeDisk, ts, name)));
 
         _hub.Reconnected += _ => SendHeartbeatAsync();
         _hub.Closed      += _ => { IsOwnerOnline = false; return Task.CompletedTask; };
@@ -183,7 +185,8 @@ public sealed class SignalRService : ISignalRService, IAsyncDisposable
                 _connectedHardwareId,
                 /*isOnline:*/ true,
                 freeDisk,
-                DateTime.UtcNow);
+                DateTime.UtcNow,
+                _profile.DisplayName);
         }
         catch (Exception ex)
         {

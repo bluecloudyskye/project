@@ -20,50 +20,53 @@ namespace WorkSpaceApp.Features.Reminders.ViewModels;
 /// </summary>
 public partial class ReminderItem : ObservableObject
 {
-    public string   Id          { get; set; } = Guid.NewGuid().ToString();
-    public string   Title       { get; set; } = string.Empty;
-    public string   Description { get; set; } = string.Empty;
-    public DateTime Time        { get; set; }
-    public bool     IsSynced    { get; set; }
-    public string?  Source      { get; set; }
-    public string   Priority    { get; set; } = "medium"; // high | medium | low
+    public string  Id       { get; set; } = Guid.NewGuid().ToString();
+    public bool    IsSynced { get; set; }
+    public string? Source   { get; set; }
+    public string  Priority { get; set; } = "medium"; // high | medium | low
 
-    /// <summary>
-    /// Completion state - when toggled, notifies parent ViewModel to refresh lists.
-    /// Data Flow: CheckBox in XAML binds TwoWay to this property.
-    /// </summary>
+    [ObservableProperty]
+    private string _title = string.Empty;
+
+    [ObservableProperty]
+    private string _description = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FormattedTime), nameof(DueDate), nameof(DueTime))]
+    private DateTime _time;
+
     [ObservableProperty]
     private bool _isCompleted;
 
-    /// <summary>
-    /// Human-readable time display (e.g., "Today at 3:00 PM").
-    /// Computed on-demand from the Time property.
-    /// </summary>
     public string FormattedTime
     {
         get
         {
-            var now      = DateTime.Now;
-            bool isToday = Time.Date == now.Date;
-            bool isTomorrow = Time.Date == now.Date.AddDays(1);
+            var now = DateTime.Now;
             string t = Time.ToString("h:mm tt");
-            if (isToday)    return $"Today at {t}";
-            if (isTomorrow) return $"Tomorrow at {t}";
+            if (Time.Date == now.Date)              return $"Today at {t}";
+            if (Time.Date == now.Date.AddDays(1))   return $"Tomorrow at {t}";
             return Time.ToString("MMM d, h:mm tt");
         }
     }
-    
-    /// <summary>
-    /// Callback for notifying parent ViewModel when this item's completion state changes.
-    /// Data Flow: Allows child item to trigger parent list refresh without tight coupling.
-    /// </summary>
+
+    // Bridges for DatePicker / TimePicker (DateTimeOffset / TimeSpan bindings)
+    public DateTimeOffset DueDate
+    {
+        get => new DateTimeOffset(Time.Year, Time.Month, Time.Day, 0, 0, 0, TimeSpan.Zero);
+        set => Time = new DateTime(value.Year, value.Month, value.Day,
+                                   Time.Hour, Time.Minute, Time.Second);
+    }
+
+    public TimeSpan DueTime
+    {
+        get => Time.TimeOfDay;
+        set => Time = Time.Date + value;
+    }
+
     public Action<ReminderItem>? OnCompletionChanged { get; set; }
 
-    partial void OnIsCompletedChanged(bool value)
-    {
-        // Notify parent ViewModel to refresh Active/Completed lists
-        OnCompletionChanged?.Invoke(this);
-    }
+    partial void OnIsCompletedChanged(bool value) => OnCompletionChanged?.Invoke(this);
 }
 
 /// <summary>

@@ -20,6 +20,11 @@
 
   <ItemGroup>
     <None Remove="FileTreeNodeView.xaml" />
+    <!-- Exclude the server sub-project — it has its own SDK and csproj -->
+    <Compile Remove="WorkSpaceServer/**" />
+    <Page    Remove="WorkSpaceServer/**" />
+    <None    Remove="WorkSpaceServer/**" />
+    <Content Remove="WorkSpaceServer/**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -47,6 +52,9 @@
 
     <!-- DI host -->
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+
+    <!-- ASP.NET Core (for in-process sync server) -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>

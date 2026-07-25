@@ -1,5 +1,6 @@
 ﻿// ============================================================
 // Core/Models/FileTreeNode.cs
+// Узел файлового дерева — папка или .md файл.
 // ============================================================
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,12 +13,31 @@ public partial class FileTreeNode : ObservableObject
     public string FullPath { get; init; } = string.Empty;
     public bool IsDirectory { get; init; }
 
+    /// <summary>True for nodes fetched from a sync share (no local file).</summary>
+    public bool IsRemote { get; init; }
+
+    /// <summary>Relative path within the shared folder (used for sync requests).</summary>
+    public string? RemoteRelativePath { get; init; }
+
     /// <summary>Дочерние узлы (только для папок).</summary>
     public ObservableCollection<FileTreeNode> Children { get; } = [];
 
     /// <summary>Теги, привязанные к файлу (для .md файлов).</summary>
     [ObservableProperty]
     private ObservableCollection<Tag> _tags = [];
+
+    public bool HasTags => !IsDirectory && Tags.Count > 0;
+
+    public FileTreeNode()
+    {
+        Tags.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasTags));
+    }
+
+    partial void OnTagsChanged(ObservableCollection<Tag> value)
+    {
+        value.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasTags));
+        OnPropertyChanged(nameof(HasTags));
+    }
 
     partial void OnIsExpandedChanged(bool value)
     {

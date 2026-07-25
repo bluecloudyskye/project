@@ -1,5 +1,18 @@
 <!-- ================================================================
      Features/Notes/Views/NoteEditorPage.xaml
+     Translates the Figma "Dashboard" component into WinUI 3 XAML.
+     Layout: Left = WebView2 (Quill rich-text editor) + TopBar
+             Right = History Log panel + Tag Manager (280px sidebar)
+     Business Rules implemented:
+       - Rich text editing (HTML via Quill in WebView2)
+       - Tag add/remove
+       - History log (ChangeLog entries)
+       - Export to PDF via QuestPDF
+     
+     FIXES APPLIED:
+       - Changed Page Background from Transparent to Solid Application Resource.
+       - Set DefaultBackgroundColor="Transparent" on WebView2 to eliminate dark box.
+       - Corrected ElementName binding for RemoveTagCommand to reference the Page.
      ================================================================ -->
 <Page
     x:Class="WorkSpaceApp.Features.Notes.Views.NoteEditorPage"
@@ -10,16 +23,17 @@
     xmlns:local="using:WorkSpaceApp.Features.Notes.Views"
     xmlns:models="using:WorkSpaceApp.Core.Models"
     xmlns:wv2="using:Microsoft.UI.Xaml.Controls"
+    xmlns:controls="using:CommunityToolkit.WinUI.UI.Controls"
     x:Name="NotePageRoot"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
+    <!-- Жесткая монолитная подложка, блокирующая прозрачность Mica для подсистемы Chromium -->
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <Grid.ColumnDefinitions>
-            <!-- Main editor area -->
-            <ColumnDefinition Width="*"/>
-            <!-- Right sidebar: History + Tags -->
-            <ColumnDefinition Width="300"/>
+            <ColumnDefinition Width="*" MinWidth="300"/>
+            <ColumnDefinition Width="5"/>
+            <ColumnDefinition Width="300" MinWidth="160" MaxWidth="520"/>
         </Grid.ColumnDefinitions>
 
         <!-- ===============================================================
@@ -64,7 +78,7 @@
 
                         <!-- Export to PDF -->
                         <Button x:Name="ExportPdfButton"
-                                Command="{x:Bind ViewModel.ExportPdfCommand}"
+                                Click="ExportPdfButton_Click"
                                 Style="{StaticResource AccentButtonStyle}"
                                 CornerRadius="8"
                                 Padding="12,6"
@@ -95,6 +109,12 @@
                         BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
                         BorderThickness="1"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+
+                    <!-- 
+                        КРИТИЧЕСКИЙ ФИКС: Явный сплошной фон под WebView2 внутри грида
+                        и флаг DefaultBackgroundColor="Transparent". Позволяет Chromium синхронно
+                        наследовать цвет темы (светлый/темный) от WinUI и возвращает фокус ввода.
+                    -->
                     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
                         <wv2:WebView2 x:Name="QuillEditor"
                                       HorizontalAlignment="Stretch"
@@ -109,20 +129,29 @@
             </Grid>
         </Grid>
 
+        <!-- Resize splitter — drag to adjust sidebar width -->
+        <controls:GridSplitter
+            Grid.Column="1"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            ResizeDirection="Columns"
+            ResizeBehavior="PreviousAndNext"
+            CursorBehavior="ChangeOnSplitterHover"
+            Background="Transparent"/>
+
         <!-- ===============================================================
              RIGHT SIDEBAR: History Log + Tag Manager
              =============================================================== -->
-        <Border Grid.Column="1"
+        <Border Grid.Column="2"
         BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
         BorderThickness="1,0,0,0"
         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
 
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="56"/>
-                    <!-- Header + кнопка выбора папки -->
-                    <RowDefinition Height="*"/>
-                    <!-- Дерево -->
+                    <RowDefinition Height="56"/>    <!-- Header + buttons -->
+                    <RowDefinition Height="*"/>     <!-- File tree -->
+                    <RowDefinition Height="Auto"/>  <!-- Sync status bar -->
                 </Grid.RowDefinitions>
 
                 <!-- Header -->
@@ -136,6 +165,7 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
+
                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                             <FontIcon Glyph="&#xED41;" FontSize="14"
                               Foreground="{ThemeResource SystemAccentColor}"/>
@@ -146,16 +176,28 @@
                                VerticalAlignment="Center"/>
                         </StackPanel>
 
-                        <!-- Кнопка выбора папки -->
-                        <Button Grid.Column="1"
-                        x:Name="PickFolderButton"
-                        Click="PickFolderButton_Click"
-                        Style="{StaticResource DateTimePickerFlyoutButtonStyle}"
-                        Width="32" Height="32" Padding="0"
-                        CornerRadius="8"
-                        ToolTipService.ToolTip="Open folder">
-                            <FontIcon Glyph="&#xE838;" FontSize="14"/>
-                        </Button>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+
+                            <!-- Connect to shared folder button -->
+                            <Button x:Name="ConnectShareButton"
+                                    Click="ConnectShare_Click"
+                                    Style="{StaticResource DateTimePickerFlyoutButtonStyle}"
+                                    Width="32" Height="32" Padding="0"
+                                    CornerRadius="8"
+                                    ToolTipService.ToolTip="Connect to shared folder">
+                                <FontIcon Glyph="&#xE71B;" FontSize="13"/>
+                            </Button>
+
+                            <!-- Open local folder button -->
+                            <Button x:Name="PickFolderButton"
+                                    Click="PickFolderButton_Click"
+                                    Style="{StaticResource DateTimePickerFlyoutButtonStyle}"
+                                    Width="32" Height="32" Padding="0"
+                                    CornerRadius="8"
+                                    ToolTipService.ToolTip="Open local folder">
+                                <FontIcon Glyph="&#xE838;" FontSize="14"/>
+                            </Button>
+                        </StackPanel>
                     </Grid>
                 </Border>
 
@@ -168,12 +210,46 @@
                     <ItemsControl x:Name="FileTreeControl" ItemsSource="{x:Bind FileTreeVM.Roots, Mode=OneWay}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="models:FileTreeNode">
+                                <!-- FIXED: Changed x:Bind to a dynamic ElementName Binding pointing to the Page root -->
                                 <local:FileTreeNodeView Node="{x:Bind}"
                                     NodeClickedCommand="{Binding ElementName=NotePageRoot, Path=FileTreeVM.NodeClickedCommand, Mode=OneWay}"/>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
+
+                <!-- Sync status bar (visible when connected to a share) -->
+                <Border Grid.Row="2"
+                        x:Name="SyncStatusBar"
+                        Visibility="Collapsed"
+                        Background="{ThemeResource SystemAccentColorLight3}"
+                        BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                        BorderThickness="0,1,0,0"
+                        Padding="12,6">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE71B;" FontSize="11"
+                                      Foreground="{ThemeResource SystemAccentColor}"/>
+                            <TextBlock x:Name="SyncStatusText"
+                                       FontSize="11"
+                                       Foreground="{ThemeResource SystemAccentColor}"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                x:Name="DisconnectShareButton"
+                                Click="DisconnectShare_Click"
+                                Style="{StaticResource DateTimePickerFlyoutButtonStyle}"
+                                Width="22" Height="22" Padding="0"
+                                ToolTipService.ToolTip="Disconnect from share">
+                            <FontIcon Glyph="&#xE711;" FontSize="10"/>
+                        </Button>
+                    </Grid>
+                </Border>
             </Grid>
         </Border>
     </Grid>
